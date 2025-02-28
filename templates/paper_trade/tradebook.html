@@ -1,0 +1,53 @@
+{% from 'paper_trade/components/trade_table.html' import trade_table %}
+
+<div class="bg-base-100 rounded-lg shadow-lg p-4">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex items-center gap-4">
+            <h2 class="text-lg font-semibold">Tradebook</h2>
+            <div class="badge badge-primary">{{ total_trades }} Trades</div>
+            <div class="text-sm opacity-70" id="tradebook-time">2025-02-24 14:27:02 UTC</div>
+        </div>
+        <div class="flex gap-2">
+            <select class="select select-bordered select-sm" id="date-filter">
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+            </select>
+            <button class="btn btn-sm btn-ghost" onclick="refreshTradebook()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Trade Summary -->
+    <div class="stats shadow mb-4 w-full">
+        <div class="stat">
+            <div class="stat-title">Net P&L</div>
+            <div class="stat-value {{ 'text-success' if net_pnl >= 0 else 'text-error' }}">
+                ₹{{ "%.2f"|format(net_pnl) }}
+            </div>
+            <div class="stat-desc">{{ win_rate }}% win rate</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Profitable Trades</div>
+            <div class="stat-value text-success">{{ profitable_trades }}</div>
+            <div class="stat-desc">Avg: ₹{{ "%.2f"|format(avg_profit) }}</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Loss Making Trades</div>
+            <div class="stat-value text-error">{{ loss_trades }}</div>
+            <div class="stat-desc">Avg: ₹{{ "%.2f"|format(avg_loss) }}</div>
+        </div>
+    </div>
+
+    <!-- Trade Table Component -->
+    {{ trade_table(
+        'tradebook-table',
+        trades,
+        ['trade_id', 'symbol', 'datetime', 'type', 'quantity', 'price', 'value', 'pnl']
+    ) }}
+</div>

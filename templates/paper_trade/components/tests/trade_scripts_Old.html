@@ -1,0 +1,247 @@
+<!-- Common Trading Scripts -->
+<script>
+// Current UTC Time: 2025-02-24 14:53:16
+// User: onlineprashant2007
+
+// Global configuration
+const CONFIG = {
+    user: 'onlineprashant2007',
+    wsEndpoint: `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/paper-trade/ws`,
+    apiEndpoint: '/api/paper-trade',
+    updateInterval: 1000,
+    retryInterval: 5000
+};
+
+// Global WebSocket connection
+let wsConnection = null;
+
+// Initialize all trading components
+document.addEventListener('DOMContentLoaded', function() {
+    initializeWebSocket();
+    initializeTimeUpdates();
+    setupEventListeners();
+});
+
+// WebSocket connection management
+function initializeWebSocket() {
+    wsConnection = new WebSocket(`${CONFIG.wsEndpoint}/trading`);
+    
+    wsConnection.onopen = () => {
+        console.log('WebSocket connected');
+        updateConnectionStatus('Connected', 'success');
+        subscribeToMarketData();
+    };
+    
+    wsConnection.onclose = () => {
+        console.log('WebSocket disconnected');
+        updateConnectionStatus('Disconnected', 'error');
+        setTimeout(initializeWebSocket, CONFIG.retryInterval);
+    };
+    
+    wsConnection.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        updateConnectionStatus('Error', 'error');
+    };
+    
+    wsConnection.onmessage = handleWebSocketMessage;
+}
+
+// Handle WebSocket messages
+function handleWebSocketMessage(event) {
+    try {
+        const data = JSON.parse(event.data);
+        
+        switch(data.type) {
+            case 'market_data':
+                updateMarketData(data.data);
+                break;
+            case 'order_update':
+                handleOrderUpdate(data.data);
+                break;
+            case 'position_update':
+                handlePositionUpdate(data.data);
+                break;
+            case 'margin_update':
+                handleMarginUpdate(data.data);
+                break;
+            case 'error':
+                showError(data.message);
+                break;
+        }
+    } catch (error) {
+        console.error('Error handling message:', error);
+    }
+}
+
+// Market data subscription
+function subscribeToMarketData(symbols = []) {
+    if (wsConnection?.readyState === WebSocket.OPEN) {
+        wsConnection.send(JSON.stringify({
+            type: 'subscribe',
+            symbols: symbols,
+            user: CONFIG.user,
+            timestamp: getCurrentUTCTime()
+        }));
+    }
+}
+
+// Common data update handlers
+function updateMarketData(data) {
+    const elements = document.querySelectorAll(`[data-symbol="${data.symbol}"]`);
+    elements.forEach(element => {
+        const field = element.dataset.field;
+        if (field && data[field] !== undefined) {
+            element.textContent = formatValue(data[field], field);
+            updateValueClass(element, data[field], field);
+        }
+    });
+}
+
+function handleOrderUpdate(order) {
+    // Update order related UI elements
+    updateOrderTable(order);
+    updateOrderStats(order);
+    showNotification(`Order ${order.order_id} ${order.status.toLowerCase()}`, order.status === 'COMPLETED' ? 'success' : 'info');
+}
+
+function handlePositionUpdate(position) {
+    // Update position related UI elements
+    updatePositionTable(position);
+    updatePositionStats(position);
+}
+
+function handleMarginUpdate(margin) {
+    // Update margin related UI elements
+    document.querySelectorAll('.margin-display').forEach(element => {
+        element.textContent = formatCurrency(margin.available);
+    });
+    
+    updateMarginStats(margin);
+}
+
+// Utility functions
+function getCurrentUTCTime() {
+    return new Date().toISOString().replace('T', ' ').slice(0, 19);
+}
+
+function updateTimeDisplays() {
+    const currentTime = getCurrentUTCTime();
+    document.querySelectorAll('.utc-time-display').forEach(element => {
+        element.textContent = currentTime;
+    });
+}
+
+function formatCurrency(value) {
+    return `₹${parseFloat(value).toFixed(2)}`;
+}
+
+function formatValue(value, type) {
+    switch(type) {
+        case 'price':
+        case 'amount':
+            return formatCurrency(value);
+        case 'percentage':
+            return `${value.toFixed(2)}%`;
+        case 'quantity':
+            return parseInt(value).toLocaleString();
+        default:
+            return value;
+    }
+}
+
+function updateValueClass(element, value, type) {
+    if (['pnl', 'change'].includes(type)) {
+        element.classList.remove('text-success', 'text-error');
+        element.classList.add(value >= 0 ? 'text-success' : 'text-error');
+    }
+}
+
+function updateConnectionStatus(status, type) {
+    const statusElements = document.querySelectorAll('.connection-status');
+    statusElements.forEach(element => {
+        element.className = `badge badge-${type} connection-status`;
+        element.textContent = status;
+    });
+}
+
+function showNotification(message, type = 'info') {
+    if (window.toast) {
+        window.toast.show(message, type);
+    }
+}
+
+function showError(message) {
+    console.error(message);
+    showNotification(message, 'error');
+}
+
+// Common table updates
+function updateOrderTable(order) {
+    const table = document.getElementById('order-table');
+    if (table) {
+        const row = table.querySelector(`tr[data-order-id="${order.order_id}"]`);
+        if (row) {
+            // Update existing row
+            updateTableRow(row, order);
+        } else {
+            // Add new row
+            addTableRow(table, order);
+        }
+    }
+}
+
+function updatePositionTable(position) {
+    const table = document.getElementById('position-table');
+    if (table) {
+        const row = table.querySelector(`tr[data-symbol="${position.symbol}"]`);
+        if (row) {
+            // Update existing row
+            updateTableRow(row, position);
+        } else {
+            // Add new row
+            addTableRow(table, position);
+        }
+    }
+}
+
+// Initialize time updates
+function initializeTimeUpdates() {
+    updateTimeDisplays();
+    setInterval(updateTimeDisplays, CONFIG.updateInterval);
+}
+
+// Setup common event listeners
+function setupEventListeners() {
+    // Handle symbol search input events
+    document.querySelectorAll('.symbol-search').forEach(input => {
+        input.addEventListener('input', debounce(handleSymbolSearch, 300));
+    });
+    
+    // Handle quantity input events
+    document.querySelectorAll('.quantity-input').forEach(input => {
+        input.addEventListener('input', validateQuantityInput);
+    });
+    
+    // Handle price input events
+    document.querySelectorAll('.price-input').forEach(input => {
+        input.addEventListener('input', validatePriceInput);
+    });
+}
+
+// Debounce utility
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+</script>
+
+<!-- Load other trading related scripts -->
+<script src="{{ url_for('static', filename='paper_trade/components/js/dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='paper_trade/components/js/order_history.js') }}"></script>

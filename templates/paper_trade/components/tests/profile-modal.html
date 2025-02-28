@@ -1,0 +1,26 @@
+<dialog id="create-profile-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Create New Profile</h3>
+        <form id="create-profile-form" method="POST">
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">Profile Name</span>
+                </label>
+                <input type="text" name="name" class="input input-bordered" required />
+            </div>
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">Initial Margin</span>
+                </label>
+                <input type="number" name="margin" class="input input-bordered" min="1000" step="1000" required />
+                <label class="label">
+                    <span class="label-text-alt">Minimum ₹1,000</span>
+                </label>
+            </div>
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="closeModal('create-profile-modal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Profile</button>
+            </div>
+        </form>
+    </div>
+</dialog>

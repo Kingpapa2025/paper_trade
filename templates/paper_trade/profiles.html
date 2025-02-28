@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Paper Trading Profiles{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-base-200 py-8">
+    <div class="max-w-5xl mx-auto px-4">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold">Paper Trading Profiles</h1>
+                <p class="text-sm opacity-70">{{ current_time|default('2025-02-25 17:24:48') }} UTC</p>
+            </div>
+            <button class="btn btn-primary" onclick="showCreateProfileModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Create Profile
+            </button>
+        </div>
+
+        <!-- Profile Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for profile in profiles %}
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <!-- Profile Header -->
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h2 class="card-title">{{ profile.name }}</h2>
+                            <p class="text-sm opacity-70">Created: {{ profile.created_at }}</p>
+                        </div>
+                        <div class="dropdown dropdown-end">
+                            <label tabindex="0" class="btn btn-ghost btn-circle btn-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                </svg>
+                            </label>
+                            <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+                                <li><a onclick="editProfile('{{ profile.id }}')">Edit Profile</a></li>
+                                <li><a onclick="resetProfile('{{ profile.id }}')">Reset Profile</a></li>
+                                <li><a onclick="deleteProfile('{{ profile.id }}')" class="text-error">Delete Profile</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Profile Stats -->
+                    <div class="stats stats-vertical shadow">
+                        <div class="stat">
+                            <div class="stat-title">Available Margin</div>
+                            <div class="stat-value text-primary">₹{{ profile.margin|default(0)|round(2) }}</div>
+                            <div class="stat-desc">{{ profile.margin_utilized|default(0)|round(2) }}% utilized</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-title">Overall P&L</div>
+                            <div class="stat-value {{ 'text-success' if profile.total_pnl >= 0 else 'text-error' }}">
+                                ₹{{ profile.total_pnl|default(0)|round(2) }}
+                            </div>
+                            <div class="stat-desc">{{ profile.pnl_percent|default(0)|round(2) }}% return</div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div class="bg-base-200 p-3 rounded-lg">
+                            <div class="text-sm opacity-70">Open Positions</div>
+                            <div class="text-xl font-bold">{{ profile.open_positions|default(0) }}</div>
+                        </div>
+                        <div class="bg-base-200 p-3 rounded-lg">
+                            <div class="text-sm opacity-70">Today's Trades</div>
+                            <div class="text-xl font-bold">{{ profile.todays_trades|default(0) }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="card-actions justify-end mt-4">
+                        <a href="{{ url_for('paper_trade_bp.dashboard', profile_id=profile.id) }}" class="btn btn-primary">
+                            Open Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            {% include 'paper_trade/no_profile.html' %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Include the Profile Modal -->
+    {% include 'paper_trade/components/profile-modal.html' %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='paper_trade/components/js/profile-management.js') }}"></script>
+{% endblock %}

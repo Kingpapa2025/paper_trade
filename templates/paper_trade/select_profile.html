@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Select Paper Trade Profile</h2>
+    
+    <form method="POST">
+        <label for="profile_id">Choose a Profile:</label>
+        <select name="profile_id" id="profile_id" required>
+            {% for profile in profiles %}
+            <option value="{{ profile.id }}" {% if profile.id == profile_id %}selected{% endif %}>
+                {{ profile.name }} (₹{{ profile.initial_margin }})
+            </option>
+            {% endfor %}
+        </select>
+        
+        <button type="submit">Select Profile</button>
+    </form>
+
+    <a href="{{ url_for('paper_trade.paper_trade_dashboard') }}">Go to Dashboard</a>
+</div>
+{% endblock %}

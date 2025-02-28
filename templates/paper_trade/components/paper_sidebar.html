@@ -1,0 +1,157 @@
+<div class="w-64 bg-base-200 border-r border-base-300 p-4">
+    <!-- Paper Trade Profiles Section -->
+    <h3 class="text-lg font-semibold mb-2">Paper Trade Profiles</h3>
+
+    <!-- Profile List -->
+    <ul class="menu menu-compact">
+        {% for profile in profiles %}
+            <li>
+                <a href="javascript:void(0);" onclick="switchProfile({{ profile.id }})" 
+                   class="flex items-center {% if profile.id == current_profile.id %}bg-primary text-white font-bold{% endif %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    {{ profile.name }}
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <!-- Create Profile Button -->
+    <button class="btn btn-primary w-full mt-4" onclick="showCreateProfileModal()">
+        ➕ Create New Profile
+    </button>
+
+    <!-- Navigation Menu -->
+    <ul class="menu menu-compact mt-6">
+        <li>
+            <a href="{{ url_for('paper_trade_bp.order_book') }}" class="{{ 'active' if active_page == 'order_book' }}">
+			    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Orderbook
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('paper_trade_bp.trade_book') }}" class="{{ 'active' if active_page == 'trade_book' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Tradebook
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('paper_trade_bp.positions') }}" class="{{ 'active' if active_page == 'positions' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                </svg>
+                Positions
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('paper_trade_bp.holdings') }}" class="{{ 'active' if active_page == 'holdings' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Holdings
+            </a>
+        </li>
+    </ul>
+</div>
+
+<!-- Create Profile Modal -->
+<div id="createProfileModal" class="modal">
+    <div class="modal-box">
+        <h3 class="text-lg font-semibold">Create New Profile</h3>
+        <form id="createProfileForm">
+            <div class="form-control">
+                <label class="label" for="profileName"><span class="label-text">Profile Name</span></label>
+                <input type="text" id="profileName" name="name" class="input input-bordered w-full" required>
+            </div>
+            <div class="form-control mt-2">
+                <label class="label" for="profileMargin"><span class="label-text">Initial Margin</span></label>
+                <input type="number" id="profileMargin" name="margin" class="input input-bordered w-full" required>
+            </div>
+            <div class="form-control mt-2">
+                <label class="label" for="maxLossPerTrade"><span class="label-text">Max Loss Per Trade</span></label>
+                <input type="number" id="maxLossPerTrade" name="max_loss_per_trade" class="input input-bordered w-full" required>
+            </div>
+            <div class="form-control mt-2">
+                <label class="label" for="maxDailyLoss"><span class="label-text">Max Daily Loss</span></label>
+                <input type="number" id="maxDailyLoss" name="max_daily_loss" class="input input-bordered w-full" required>
+            </div>
+            <div class="modal-action">
+                <button type="submit" class="btn btn-success">Create</button>
+                <button type="button" class="btn" onclick="closeCreateProfileModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+function showCreateProfileModal() {
+    document.getElementById("createProfileModal").classList.remove("hidden");
+}
+
+function closeCreateProfileModal() {
+    document.getElementById("createProfileModal").classList.add("hidden");
+}
+
+document.getElementById("createProfileForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    fetch("{{ url_for('paper_trade_bp.create_new_profile') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            name: document.getElementById("profileName").value,
+            initial_margin: parseFloat(document.getElementById("profileMargin").value)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.profile_id) {
+            location.reload();
+        } else {
+            alert("Error: " + data.message);
+        }
+    })
+    .catch(error => console.error("Error:", error));
+});
+
+function switchProfile(profileId) {
+    fetch("{{ url_for('paper_trade_bp.select_profile') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ profile_id: profileId })
+    })
+    .then(response => {
+        if (response.redirected) {
+            window.location.href = response.url; // Redirect to the new page
+        } else {
+            return response.json();
+        }
+    })
+    .then(data => {
+        if (data && !data.success) {
+            alert("Error: " + data.message);
+        }
+    })
+    .catch(error => console.error("Error:", error));
+}
+
+function updateMarginAndPnL() {
+    fetch("{{ url_for('paper_trade_bp.get_margin_pnl') }}")
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById("available_margin").innerText = data.available_margin;
+            document.getElementById("realized_pnl").innerText = data.realized_pnl;
+        }
+    })
+    .catch(error => console.error("Error:", error));
+}
+
+document.addEventListener("DOMContentLoaded", updateMarginAndPnL);
+</script>

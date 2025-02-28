@@ -1,0 +1,363 @@
+<!-- Modals Container -->
+<div class="modal-container">
+    <!-- Add Margin Modal -->
+    <dialog id="add-margin-modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">Add Margin</h3>
+            <form method="dialog" id="add-margin-form">
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text">Amount (₹)</span>
+                    </label>
+                    <input type="number" 
+                           id="margin-amount" 
+                           class="input input-bordered" 
+                           min="1000" 
+                           step="100"
+                           required />
+                    <label class="label">
+                        <span class="label-text-alt">Minimum ₹1,000</span>
+                    </label>
+                </div>
+                
+                <div class="stats bg-base-200 shadow w-full mb-4">
+                    <div class="stat">
+                        <div class="stat-title">Current Margin</div>
+                        <div class="stat-value text-primary">₹{{ current_margin|default(0)|round(2) }}</div>
+                        <div class="stat-desc">Last updated: {{ current_time }}</div>
+                    </div>
+                </div>
+
+                <div class="modal-action">
+                    <button type="button" class="btn" onclick="closeModal('add-margin-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Margin</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- Reset Margin Modal -->
+    <dialog id="reset-margin-modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">Reset Margin</h3>
+            <p class="py-4">Are you sure you want to reset your margin? This will:</p>
+            <ul class="list-disc list-inside mb-4 space-y-2">
+                <li>Close all open positions</li>
+                <li>Cancel all pending orders</li>
+                <li>Reset your margin to ₹0</li>
+            </ul>
+            <div class="modal-action">
+                <button class="btn" onclick="closeModal('reset-margin-modal')">Cancel</button>
+                <button class="btn btn-error" onclick="confirmResetMargin()">Reset Margin</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Order Details Modal -->
+    <dialog id="order-details-modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">Order Details</h3>
+            <div id="order-details-content" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Order ID</span>
+                        </label>
+                        <input type="text" id="detail-order-id" class="input input-bordered" readonly />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Status</span>
+                        </label>
+                        <input type="text" id="detail-status" class="input input-bordered" readonly />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Symbol</span>
+                        </label>
+                        <input type="text" id="detail-symbol" class="input input-bordered" readonly />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Type</span>
+                        </label>
+                        <input type="text" id="detail-type" class="input input-bordered" readonly />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Quantity</span>
+                        </label>
+                        <input type="text" id="detail-quantity" class="input input-bordered" readonly />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Price</span>
+                        </label>
+                        <input type="text" id="detail-price" class="input input-bordered" readonly />
+                    </div>
+                </div>
+
+                <div class="stats shadow w-full">
+                    <div class="stat">
+                        <div class="stat-title">Current P&L</div>
+                        <div id="detail-pnl" class="stat-value">₹0.00</div>
+                        <div id="detail-pnl-percent" class="stat-desc">0.00%</div>
+                    </div>
+                </div>
+
+                <div class="collapse bg-base-200">
+                    <input type="checkbox" />
+                    <div class="collapse-title font-medium">
+                        Additional Details
+                    </div>
+                    <div class="collapse-content">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Order Time</span>
+                                </label>
+                                <input type="text" id="detail-time" class="input input-bordered" readonly />
+                            </div>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Last Modified</span>
+                                </label>
+                                <input type="text" id="detail-last-modified" class="input input-bordered" readonly />
+                            </div>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Exchange</span>
+                                </label>
+                                <input type="text" id="detail-exchange" class="input input-bordered" readonly />
+                            </div>
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Product</span>
+                                </label>
+                                <input type="text" id="detail-product" class="input input-bordered" readonly />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-action">
+                <button class="btn" onclick="closeModal('order-details-modal')">Close</button>
+                <button id="modify-order-btn" class="btn btn-primary hidden">Modify</button>
+                <button id="cancel-order-btn" class="btn btn-error hidden">Cancel Order</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Settings Modal -->
+    <dialog id="settings-modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">Paper Trading Settings</h3>
+            <form method="dialog" id="settings-form">
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text">Default Order Quantity</span>
+                    </label>
+                    <input type="number" 
+                           id="default-quantity" 
+                           class="input input-bordered" 
+                           min="1" />
+                </div>
+
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text">Risk Management</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Max Loss Per Trade (%)</span>
+                            </label>
+                            <input type="number" 
+                                   id="max-loss-percent" 
+                                   class="input input-bordered" 
+                                   min="0" 
+                                   max="100" 
+                                   step="0.1" />
+                        </div>
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Max Loss Per Day (%)</span>
+                            </label>
+                            <input type="number" 
+                                   id="max-loss-day" 
+                                   class="input input-bordered" 
+                                   min="0" 
+                                   max="100" 
+                                   step="0.1" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-action">
+                    <button type="button" class="btn" onclick="closeModal('settings-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+</div>
+
+<script>
+// Modal Management
+function showModal(modalId) {
+    document.getElementById(modalId).showModal();
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).close();
+}
+
+// Add Margin Form Handler
+document.getElementById('add-margin-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const amount = parseFloat(document.getElementById('margin-amount').value);
+    
+    try {
+        const response = await fetch('/api/paper-trade/margin/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                amount: amount,
+                timestamp: '2025-02-24 14:13:49',
+                user: 'onlineprashant2007'
+            })
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            toast.show(`Successfully added ₹${amount} to margin`, 'success');
+            closeModal('add-margin-modal');
+            updateMarginDisplay();
+        } else {
+            toast.show(result.message || 'Failed to add margin', 'error');
+        }
+    } catch (error) {
+        console.error('Add margin error:', error);
+        toast.show('Error adding margin', 'error');
+    }
+});
+
+// Reset Margin Handler
+async function confirmResetMargin() {
+    try {
+        const response = await fetch('/api/paper-trade/margin/reset', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                timestamp: '2025-02-24 14:13:49',
+                user: 'onlineprashant2007'
+            })
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            toast.show('Margin reset successfully', 'success');
+            closeModal('reset-margin-modal');
+            updateMarginDisplay();
+        } else {
+            toast.show(result.message || 'Failed to reset margin', 'error');
+        }
+    } catch (error) {
+        console.error('Reset margin error:', error);
+        toast.show('Error resetting margin', 'error');
+    }
+}
+
+// Order Details Handler
+async function showOrderDetails(orderId) {
+    try {
+        const response = await fetch(`/api/paper-trade/orders/${orderId}`);
+        const order = await response.json();
+        
+        // Populate order details
+        document.getElementById('detail-order-id').value = order.order_id;
+        document.getElementById('detail-status').value = order.status;
+        document.getElementById('detail-symbol').value = order.symbol;
+        document.getElementById('detail-type').value = order.type;
+        document.getElementById('detail-quantity').value = order.quantity;
+        document.getElementById('detail-price').value = order.price;
+        document.getElementById('detail-time').value = order.datetime;
+        document.getElementById('detail-last-modified').value = order.last_modified;
+        document.getElementById('detail-exchange').value = order.exchange;
+        document.getElementById('detail-product').value = order.product;
+
+        // Update P&L display
+        const pnlElement = document.getElementById('detail-pnl');
+        const pnlPercentElement = document.getElementById('detail-pnl-percent');
+        pnlElement.className = `stat-value ${order.pnl >= 0 ? 'text-success' : 'text-error'}`;
+        pnlElement.textContent = `₹${order.pnl.toFixed(2)}`;
+        pnlPercentElement.textContent = `${order.pnl_percent.toFixed(2)}%`;
+
+        // Show/hide action buttons based on order status
+        document.getElementById('modify-order-btn').classList.toggle('hidden', order.status !== 'PENDING');
+        document.getElementById('cancel-order-btn').classList.toggle('hidden', order.status !== 'PENDING');
+
+        showModal('order-details-modal');
+    } catch (error) {
+        console.error('Order details error:', error);
+        toast.show('Error fetching order details', 'error');
+    }
+}
+
+// Settings Form Handler
+document.getElementById('settings-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const settings = {
+        default_quantity: parseInt(document.getElementById('default-quantity').value),
+        max_loss_percent: parseFloat(document.getElementById('max-loss-percent').value),
+        max_loss_day: parseFloat(document.getElementById('max-loss-day').value),
+        timestamp: '2025-02-24 14:13:49',
+        user: 'onlineprashant2007'
+    };
+
+    try {
+        const response = await fetch('/api/paper-trade/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            toast.show('Settings saved successfully', 'success');
+            closeModal('settings-modal');
+        } else {
+            toast.show(result.message || 'Failed to save settings', 'error');
+        }
+    } catch (error) {
+        console.error('Settings save error:', error);
+        toast.show('Error saving settings', 'error');
+    }
+});
+
+// Update margin display
+async function updateMarginDisplay() {
+    try {
+        const response = await fetch('/api/paper-trade/margin');
+        const margin = await response.json();
+        
+        // Update margin displays across the application
+        document.querySelectorAll('.margin-display').forEach(element => {
+            element.textContent = `₹${margin.available.toFixed(2)}`;
+        });
+    } catch (error) {
+        console.error('Margin update error:', error);
+    }
+}
+</script>

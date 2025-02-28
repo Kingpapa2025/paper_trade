@@ -1,0 +1,50 @@
+{% from 'paper_trade/components/trade_table.html' import trade_table %}
+
+<div class="bg-base-100 rounded-lg shadow-lg p-4">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex items-center gap-4">
+            <h2 class="text-lg font-semibold">Positions</h2>
+            <div class="badge badge-primary">{{ total_positions }} Active</div>
+            <div class="text-sm opacity-70" id="positions-time">2025-02-24 14:27:02 UTC</div>
+        </div>
+        <div class="flex gap-2">
+            <button class="btn btn-sm btn-success" onclick="squareOffAll()">
+                Square Off All
+            </button>
+            <button class="btn btn-sm btn-ghost" onclick="refreshPositions()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Position Summary -->
+    <div class="stats shadow mb-4 w-full">
+        <div class="stat">
+            <div class="stat-title">Day's P&L</div>
+            <div class="stat-value {{ 'text-success' if total_pnl >= 0 else 'text-error' }}">
+                ₹{{ "%.2f"|format(total_pnl) }}
+            </div>
+            <div class="stat-desc">{{ "%.2f"|format(pnl_percent) }}%</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Long Value</div>
+            <div class="stat-value text-primary">₹{{ "%.2f"|format(long_value) }}</div>
+            <div class="stat-desc">{{ long_positions }} positions</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Short Value</div>
+            <div class="stat-value text-secondary">₹{{ "%.2f"|format(short_value) }}</div>
+            <div class="stat-desc">{{ short_positions }} positions</div>
+        </div>
+    </div>
+
+    <!-- Trade Table Component -->
+    {{ trade_table(
+        'positions-table',
+        positions,
+        ['symbol', 'type', 'quantity', 'avg_price', 'current_price', 'pnl', 'change_percent', 'actions']
+    ) }}
+</div>

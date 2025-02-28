@@ -1,0 +1,46 @@
+{% from 'paper_trade/components/trade_table.html' import trade_table %}
+
+<div class="bg-base-100 rounded-lg shadow-lg p-4">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex items-center gap-4">
+            <h2 class="text-lg font-semibold">Orderbook</h2>
+            <div class="badge badge-primary">{{ total_orders }} Orders</div>
+            <div class="text-sm opacity-70" id="orderbook-time">2025-02-24 14:27:02 UTC</div>
+        </div>
+        <div class="flex gap-2">
+            <div id="connection-status" class="badge badge-success">Connected</div>
+            <button class="btn btn-sm btn-ghost" onclick="refreshOrderbook()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Order Summary Stats -->
+    <div class="stats shadow mb-4 w-full">
+        <div class="stat">
+            <div class="stat-title">Pending</div>
+            <div class="stat-value text-warning">{{ pending_orders }}</div>
+            <div class="stat-desc">Awaiting execution</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Executed</div>
+            <div class="stat-value text-success">{{ executed_orders }}</div>
+            <div class="stat-desc">Successfully completed</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Cancelled</div>
+            <div class="stat-value text-error">{{ cancelled_orders }}</div>
+            <div class="stat-desc">User cancelled</div>
+        </div>
+    </div>
+
+    <!-- Trade Table Component -->
+    {{ trade_table(
+        'orderbook-table',
+        orders,
+        ['order_id', 'symbol', 'datetime', 'type', 'price', 'trigger_price', 'quantity', 'status', 'message']
+    ) }}
+</div>

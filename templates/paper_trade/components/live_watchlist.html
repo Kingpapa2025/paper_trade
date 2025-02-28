@@ -1,0 +1,90 @@
+<div class="card bg-base-100 shadow-xl h-full">
+    <div class="card-body p-4">
+        <!-- Header with buttons -->
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="card-title text-lg">Live Watchlist</h2>
+            <div class="btn-group">
+                <button id="addBtn" class="btn btn-xs btn-primary" onclick="showAddSymbolModal()">
+                    <i class="fas fa-plus"></i> Add
+                </button>
+                <button id="removeBtn" class="btn btn-xs btn-error" onclick="removeSelectedSymbols()">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+                <button id="subscribeBtn" class="btn btn-xs btn-success" onclick="subscribeSymbols()">
+                    <i class="fas fa-play"></i> Subscribe
+                </button>
+                <button id="unsubscribeBtn" class="btn btn-xs btn-warning" onclick="unsubscribeSymbols()">
+                    <i class="fas fa-pause"></i> Unsubscribe
+                </button>
+                <button id="startBtn" class="btn btn-xs btn-info" onclick="startWebSocket()">
+                    <i class="fas fa-power-off"></i> Start
+                </button>
+                <button id="stopBtn" class="btn btn-xs btn-neutral" onclick="stopWebSocket()">
+                    <i class="fas fa-stop"></i> Stop
+                </button>
+            </div>
+        </div>
+
+        <!-- Watchlist Table -->
+        <div class="overflow-x-auto overflow-y-auto max-h-[calc(100vh-200px)]">
+            <table class="table table-compact w-full">
+                <thead class="sticky top-0 bg-base-100">
+                    <tr>
+                        <th class="w-8">
+                            <input type="checkbox" class="checkbox checkbox-xs" onclick="toggleAllCheckboxes(this)">
+                        </th>
+                        <th>Symbol</th>
+                        <th>Exchange</th>
+                        <th>Token</th>
+                        <th>Time</th>
+                        <th>LTP</th>
+                        <th>Open</th>
+                        <th>High</th>
+                        <th>Low</th>
+                        <th>Close</th>
+                        <th>Volume</th>
+                    </tr>
+                </thead>
+                <tbody id="watchlistBody">
+                    <!-- Data will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Symbol Modal -->
+<dialog id="addSymbolModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg">Add Symbol</h3>
+        <div class="form-control w-full">
+            <input type="text" id="symbolSearch" 
+                   class="input input-bordered w-full mt-4" 
+                   placeholder="Search symbol..."
+                   oninput="searchSymbols(this.value)">
+            <div id="searchResults" class="mt-2 max-h-48 overflow-y-auto">
+                <!-- Search results will appear here -->
+            </div>
+        </div>
+        <div class="modal-action">
+            <button class="btn btn-sm" onclick="closeAddSymbolModal()">Cancel</button>
+        </div>
+    </div>
+</dialog>
+
+<script src="{{ url_for('static', filename='js/trade_scripts.js') }}"></script>
+
+<style>
+@keyframes flash {
+    0% { background-color: rgba(255, 255, 0, 0.2); }
+    100% { background-color: transparent; }
+}
+
+.animate-flash {
+    animation: flash 0.5s ease-out;
+}
+
+.price-cell {
+    transition: color 0.3s ease;
+}
+</style>

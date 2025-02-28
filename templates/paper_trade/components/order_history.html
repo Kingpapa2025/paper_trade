@@ -1,0 +1,89 @@
+{% from 'paper_trade/components/trade_table.html' import trade_table %}
+
+<div class="bg-base-100 rounded-lg shadow-lg p-4">
+    <!-- Header with UTC Time and Connection Status -->
+    <div class="order-history-header flex items-center justify-between mb-4">
+        <div class="flex items-center gap-4">
+            <h2 class="text-lg font-semibold">Order History</h2>
+            <div class="badge badge-primary">Today's Trades</div>
+            <div id="utc-time" class="text-sm opacity-70">2025-02-24 14:02:48 UTC</div>
+        </div>
+        <div id="connection-status" class="badge badge-error" title="Connecting...">
+            Connecting...
+        </div>
+    </div>
+
+    <!-- Stats Summary -->
+    <div class="stats shadow mb-4 w-full">
+        <div class="stat">
+            <div class="stat-title">Total Orders</div>
+            <div class="stat-value" id="total-count">0</div>
+            <div class="stat-desc">Today</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Executed</div>
+            <div class="stat-value text-success" id="executed-count">0</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Pending</div>
+            <div class="stat-value text-warning" id="pending-count">0</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Cancelled</div>
+            <div class="stat-value text-error" id="cancelled-count">0</div>
+        </div>
+    </div>
+
+    <!-- Trade Table Component -->
+    {{ trade_table(
+        'order-history-table',
+        orders,
+        ['order_id', 'symbol', 'datetime', 'type', 'price', 'quantity', 'status', 'current_price', 'change_percent', 'pnl']
+    ) }}
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='paper_trade/components/js/order_history.js') }}"></script>
+    <script>
+        // Initialize Table Manager and Toast
+        const tableManager = new OrderTableManager('order-history-table');
+        const toast = new ToastNotification();
+
+        // Initialize WebSocket Manager
+        const wsManager = new WebSocketManager();
+        wsManager.connect();
+
+        // Update UTC time
+        function updateUTCTime() {
+            const now = new Date();
+            document.getElementById('utc-time').textContent = 
+                now.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+        }
+
+        // Initialize when document is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            updateUTCTime();
+            setInterval(updateUTCTime, 1000);
+            
+            // Handle symbol subscription from filters if present
+            const symbolFilter = document.getElementById('symbol-filter');
+            if (symbolFilter) {
+                symbolFilter.addEventListener('change', function(e) {
+                    const symbol = e.target.value.toUpperCase();
+                    if (symbol) {
+                        wsManager.subscribe(symbol);
+                    }
+                });
+            }
+        });
+
+        // Update connection status based on WebSocket state
+        function updateConnectionStatus(status, type = 'error') {
+            const statusElement = document.getElementById('connection-status');
+            if (statusElement) {
+                statusElement.className = `badge badge-${type}`;
+                statusElement.textContent = status;
+                statusElement.title = `Last updated: ${new Date().toISOString()}`;
+            }
+        }
+    </script>
+</div>

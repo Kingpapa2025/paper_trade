@@ -1,0 +1,390 @@
+<!-- trade_scripts.html v3 -->
+<!-- Current UTC Time: 2025-02-24 15:01:53 -->
+<!-- User: onlineprashant2007 -->
+
+<script>
+// Global Configuration
+// At the top of the file, update CONFIG:
+const CONFIG = {
+    user: 'onlineprashant2007',
+    currentTime: '2025-02-24 15:40:19',  // Updated time
+    wsEnabled: false,  // Add this flag to disable WebSocket
+    wsEndpoint: `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/paper-trade/ws`,
+    apiEndpoint: '/api/paper-trade',
+    updateInterval: 1000,
+    retryInterval: 5000,
+    maxRetries: 5
+};
+
+// Move initializeWebSocket function inside WebSocketManager class:
+class WebSocketManager {
+    constructor() {
+        this.connection = null;
+        this.retryCount = 0;
+        this.subscriptions = new Set();
+        this.handlers = new Map();
+        
+        if (CONFIG.wsEnabled) {
+            this.initialize();
+        } else {
+            console.log('WebSocket functionality is temporarily disabled');
+            updateConnectionStatus('Disabled', 'warning');
+        }
+    }
+
+    initialize() {
+        this.connect();
+        this.setupHeartbeat();
+    }
+
+// Core Classes
+class WebSocketManager {
+    constructor() {
+        this.connection = null;
+        this.retryCount = 0;
+        this.subscriptions = new Set();
+        this.handlers = new Map();
+        this.initialize();
+    }
+
+    initialize() {
+        this.connect();
+        this.setupHeartbeat();
+    }
+
+    connect() {
+        try {
+            this.connection = new WebSocket(`${CONFIG.wsEndpoint}/trading`);
+            this.setupEventHandlers();
+        } catch (error) {
+            console.error('WebSocket connection error:', error);
+            this.handleConnectionError();
+        }
+    }
+
+    setupEventHandlers() {
+        this.connection.onopen = () => {
+            console.log('WebSocket connected');
+            this.retryCount = 0;
+            updateConnectionStatus('Connected', 'success');
+            this.resubscribe();
+        };
+
+        this.connection.onclose = () => {
+            console.log('WebSocket disconnected');
+            updateConnectionStatus('Disconnected', 'error');
+            this.handleConnectionError();
+        };
+
+        this.connection.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            updateConnectionStatus('Error', 'error');
+        };
+
+        this.connection.onmessage = (event) => this.handleMessage(event);
+    }
+
+    handleMessage(event) {
+        try {
+            const data = JSON.parse(event.data);
+            const handler = this.handlers.get(data.type) || this.defaultHandler;
+            handler(data);
+        } catch (error) {
+            console.error('Message handling error:', error);
+        }
+    }
+
+    defaultHandler(data) {
+        console.log('Unhandled message type:', data.type);
+    }
+
+    setupHeartbeat() {
+        setInterval(() => {
+            if (this.connection?.readyState === WebSocket.OPEN) {
+                this.connection.send(JSON.stringify({
+                    type: 'heartbeat',
+                    timestamp: getCurrentUTCTime()
+                }));
+            }
+        }, 30000);
+    }
+
+    handleConnectionError() {
+        if (this.retryCount < CONFIG.maxRetries) {
+            this.retryCount++;
+            setTimeout(() => this.connect(), CONFIG.retryInterval);
+        } else {
+            showError('Maximum connection retries reached. Please refresh the page.');
+        }
+    }
+
+    subscribe(channel, data = {}) {
+        const subscription = { channel, data };
+        this.subscriptions.add(subscription);
+        
+        if (this.connection?.readyState === WebSocket.OPEN) {
+            this.connection.send(JSON.stringify({
+                type: 'subscribe',
+                channel: channel,
+                data: data,
+                timestamp: getCurrentUTCTime()
+            }));
+        }
+    }
+
+    resubscribe() {
+        this.subscriptions.forEach(sub => this.subscribe(sub.channel, sub.data));
+    }
+
+    registerHandler(type, handler) {
+        this.handlers.set(type, handler);
+    }
+}
+
+// Market Data Management
+class MarketDataManager {
+    constructor() {
+        this.data = new Map();
+        this.callbacks = new Map();
+    }
+
+    update(symbol, data) {
+        this.data.set(symbol, {
+            ...this.data.get(symbol),
+            ...data,
+            lastUpdate: getCurrentUTCTime()
+        });
+        this.notifyListeners(symbol);
+    }
+
+    subscribe(symbol, callback) {
+        if (!this.callbacks.has(symbol)) {
+            this.callbacks.set(symbol, new Set());
+        }
+        this.callbacks.get(symbol).add(callback);
+    }
+
+    unsubscribe(symbol, callback) {
+        this.callbacks.get(symbol)?.delete(callback);
+    }
+
+    notifyListeners(symbol) {
+        const data = this.data.get(symbol);
+        this.callbacks.get(symbol)?.forEach(callback => callback(data));
+    }
+}
+
+// Order Management
+class OrderManager {
+    constructor() {
+        this.orders = new Map();
+        this.callbacks = new Set();
+    }
+
+    async placeOrder(orderData) {
+        try {
+            const response = await fetch(`${CONFIG.apiEndpoint}/orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...orderData,
+                    timestamp: getCurrentUTCTime(),
+                    user: CONFIG.user
+                })
+            });
+
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message);
+
+            this.addOrder(result);
+            showNotification('Order placed successfully', 'success');
+            return result;
+        } catch (error) {
+            showError(`Order placement failed: ${error.message}`);
+            throw error;
+        }
+    }
+
+    addOrder(order) {
+        this.orders.set(order.orderId, order);
+        this.notifyListeners('add', order);
+    }
+
+    updateOrder(order) {
+        this.orders.set(order.orderId, order);
+        this.notifyListeners('update', order);
+    }
+
+    notifyListeners(action, order) {
+        this.callbacks.forEach(callback => callback(action, order));
+    }
+}
+
+// Position Management
+class PositionManager {
+    constructor() {
+        this.positions = new Map();
+        this.callbacks = new Set();
+    }
+
+    updatePosition(position) {
+        this.positions.set(position.symbol, position);
+        this.notifyListeners('update', position);
+    }
+
+    getPosition(symbol) {
+        return this.positions.get(symbol);
+    }
+
+    notifyListeners(action, position) {
+        this.callbacks.forEach(callback => callback(action, position));
+    }
+}
+
+// Utility Functions
+const Formatters = {
+    currency: (value) => `₹${parseFloat(value).toFixed(2)}`,
+    
+    percentage: (value) => `${value.toFixed(2)}%`,
+    
+    quantity: (value) => parseInt(value).toLocaleString(),
+    
+    datetime: (value) => {
+        const date = new Date(value);
+        return date.toISOString().replace('T', ' ').slice(0, 19);
+    },
+    
+    largeNumber: (number) => {
+        return new Intl.NumberFormat('en-IN', {
+            maximumFractionDigits: 2,
+            notation: 'compact'
+        }).format(number);
+    }
+};
+
+const Validators = {
+    quantity: (value, minQty = 1) => {
+        return value >= minQty && Number.isInteger(value);
+    },
+    
+    price: (value, minPrice = 0) => {
+        return value > minPrice && !isNaN(value);
+    },
+    
+    symbol: (value) => {
+        return /^[A-Z]{1,20}$/.test(value);
+    }
+};
+
+// UI Update Functions
+function updateConnectionStatus(status, type) {
+    document.querySelectorAll('.connection-status').forEach(element => {
+        element.className = `badge badge-${type} connection-status`;
+        element.textContent = status;
+    });
+}
+
+function updateTimeDisplays() {
+    const currentTime = getCurrentUTCTime();
+    document.querySelectorAll('.utc-time-display').forEach(element => {
+        element.textContent = currentTime;
+    });
+}
+
+function updateMarketData(symbol, data) {
+    document.querySelectorAll(`[data-symbol="${symbol}"]`).forEach(element => {
+        const field = element.dataset.field;
+        if (field && data[field] !== undefined) {
+            element.textContent = Formatters[field]?.(data[field]) ?? data[field];
+            updateValueClass(element, data[field], field);
+        }
+    });
+}
+
+function updateValueClass(element, value, type) {
+    if (['pnl', 'change'].includes(type)) {
+        element.classList.remove('text-success', 'text-error');
+        element.classList.add(value >= 0 ? 'text-success' : 'text-error');
+    }
+}
+
+// Notification System
+const NotificationSystem = {
+    show(message, type = 'info') {
+        if (window.toast) {
+            window.toast.show(message, type);
+        }
+    },
+    
+    error(message) {
+        this.show(message, 'error');
+        console.error(message);
+    }
+};
+
+// Helper Functions
+function getCurrentUTCTime() {
+    return new Date().toISOString().replace('T', ' ').slice(0, 19);
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+// Initialize Global Instances
+window.wsManager = new WebSocketManager();
+window.marketData = new MarketDataManager();
+window.orderManager = new OrderManager();
+window.positionManager = new PositionManager();
+
+// Document Ready Handler
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize time updates
+    updateTimeDisplays();
+    setInterval(updateTimeDisplays, CONFIG.updateInterval);
+
+    // Setup common event listeners
+    setupEventListeners();
+});
+
+// Common Event Listeners
+function setupEventListeners() {
+    // Symbol search inputs
+    document.querySelectorAll('.symbol-search').forEach(input => {
+        input.addEventListener('input', debounce(handleSymbolSearch, 300));
+    });
+
+    // Quantity inputs
+    document.querySelectorAll('.quantity-input').forEach(input => {
+        input.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            if (!Validators.quantity(value)) {
+                e.target.classList.add('input-error');
+            } else {
+                e.target.classList.remove('input-error');
+            }
+        });
+    });
+
+    // Price inputs
+    document.querySelectorAll('.price-input').forEach(input => {
+        input.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            if (!Validators.price(value)) {
+                e.target.classList.add('input-error');
+            } else {
+                e.target.classList.remove('input-error');
+            }
+        });
+    });
+}
+</script>
+
+<!-- Load Components -->
+<script src="{{ url_for('static', filename='paper_trade/components/js/dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='paper_trade/components/js/order_history.js') }}"></script>
+<script src="{{ url_for('static', filename='paper_trade/components/js/watchlist.js') }}"></script>

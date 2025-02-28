@@ -1,0 +1,142 @@
+{% from 'paper_trade/components/trade_table.html' import trade_table %}
+
+<div class="bg-base-100 rounded-lg shadow-lg p-4">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex items-center gap-4">
+            <h2 class="text-lg font-semibold">Holdings</h2>
+            <div class="badge badge-primary">{{ total_holdings }} Stocks</div>
+            <div class="text-sm opacity-70" id="holdings-time">2025-02-24 14:27:02 UTC</div>
+        </div>
+        <div class="flex gap-2">
+            <button class="btn btn-sm btn-success" onclick="sellAllHoldings()">
+                Sell All
+            </button>
+            <button class="btn btn-sm btn-ghost" onclick="refreshHoldings()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Holdings Summary -->
+    <div class="stats shadow mb-4 w-full">
+        <div class="stat">
+            <div class="stat-title">Total Value</div>
+            <div class="stat-value">₹{{ "%.2f"|format(total_value) }}</div>
+            <div class="stat-desc">Current market value</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Total Investment</div>
+            <div class="stat-value text-primary">₹{{ "%.2f"|format(total_investment) }}</div>
+            <div class="stat-desc">Purchase value</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Overall P&L</div>
+            <div class="stat-value {{ 'text-success' if total_pnl >= 0 else 'text-error' }}">
+                ₹{{ "%.2f"|format(total_pnl) }}
+            </div>
+            <div class="stat-desc">{{ "%.2f"|format(pnl_percent) }}%</div>
+        </div>
+    </div>
+
+    <!-- Trade Table Component -->
+    {{ trade_table(
+        'holdings-table',
+        holdings,
+        ['symbol', 'quantity', 'avg_price', 'current_price', 'current_value', 'pnl', 'change_percent', 'actions']
+    ) }}
+</div>
+
+<script>
+// Common time update function for all components
+function updateTime() {
+    const now = new Date();
+    const timeString = now.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+    
+    ['orderbook-time', 'positions-time', 'tradebook-time', 'holdings-time'].forEach(id => {
+        document.getElementById(id).textContent = timeString;
+    });
+}
+
+// Initialize when document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Start time updates
+    updateTime();
+    setInterval(updateTime, 1000);
+    
+    // Initialize WebSocket connections
+    initializeWebSocket();
+});
+
+// WebSocket initialization
+function initializeWebSocket() {
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${wsProtocol}//${window.location.host}/paper-trade/ws/data`);
+    
+    ws.onopen = () => {
+        document.getElementById('connection-status').className = 'badge badge-success';
+        document.getElementById('connection-status').textContent = 'Connected';
+    };
+    
+    ws.onclose = () => {
+        document.getElementById('connection-status').className = 'badge badge-error';
+        document.getElementById('connection-status').textContent = 'Disconnected';
+        setTimeout(initializeWebSocket, 5000);
+    };
+    
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleWebSocketMessage(data);
+    };
+}
+
+// Handle WebSocket messages
+function handleWebSocketMessage(data) {
+    switch(data.type) {
+        case 'orderbook_update':
+            updateOrderbook(data.data);
+            break;
+        case 'positions_update':
+            updatePositions(data.data);
+            break;
+        case 'tradebook_update':
+            updateTradebook(data.data);
+            break;
+        case 'holdings_update':
+            updateHoldings(data.data);
+            break;
+    }
+}
+
+// Refresh functions for each component
+function refreshOrderbook() {
+    fetch('/api/paper-trade/orderbook')
+        .then(response => response.json())
+        .then(data => updateOrderbook(data))
+        .catch(error => console.error('Error refreshing orderbook:', error));
+}
+
+function refreshPositions() {
+    fetch('/api/paper-trade/positions')
+        .then(response => response.json())
+        .then(data => updatePositions(data))
+        .catch(error => console.error('Error refreshing positions:', error));
+}
+
+function refreshTradebook() {
+    const dateFilter = document.getElementById('date-filter').value;
+    fetch(`/api/paper-trade/tradebook?filter=${dateFilter}`)
+        .then(response => response.json())
+        .then(data => updateTradebook(data))
+        .catch(error => console.error('Error refreshing tradebook:', error));
+}
+
+function refreshHoldings() {
+    fetch('/api/paper-trade/holdings')
+        .then(response => response.json())
+        .then(data => updateHoldings(data))
+        .catch(error => console.error('Error refreshing holdings:', error));
+}
+</script>
